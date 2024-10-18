@@ -55,7 +55,7 @@ export default function App() {
 
     return () => {
       if (autoClickerInterval) {
-        clearInterval(autoClickerInterval);
+        clearInterval(autoClickerInterval); 
       }
     };
   }, [autoClickerActive, chickens, pigs, cows, sheep, goats, clickMultiplier]);
@@ -188,7 +188,7 @@ export default function App() {
         }
 
         // Actualiza el total de animales después de las modificaciones
-        setTotalAnimals(newTotalAnimals);
+        //setTotalAnimals(newTotalAnimals);
     } else {
         alert('No tienes suficientes monedas!'); // Mensaje de error si no se tienen suficientes monedas
     }
@@ -196,14 +196,73 @@ export default function App() {
 
   // Función para verificar si un artículo está disponible para compra
   const isItemAvailable = (item) => {
-    const animalIndex = storeItems.findIndex(storeItem => storeItem.name === item.name);
+    if (item.name === 'Gallina') {
+      return chickens < 5 && pigs === 0 && cows === 0 && sheep === 0 && goats === 0;
+    }
+    if (item.name === 'Cerdo') {
+      return pigs < 5 && cows === 0 && sheep === 0 && goats === 0 && completedMissions[0];
+    }
+    if (item.name === 'Vaca') {
+      return cows < 5 && sheep === 0 && goats === 0 && completedMissions[1];
+    }
+    if (item.name === 'Oveja') {
+      return sheep < 5 && goats === 0 && completedMissions[2];
+    }
+    if (item.name === 'Cabra') {
+      return goats < 5 && completedMissions[3];
+    }
     if (item.name === 'Multiplicador de Clics') {
       return !clickMultiplierActive;
     }
     if (item.name === 'Clicador Automático') {
       return !autoClickerActive;
     }
-    return unlockedAnimals[animalIndex];
+    return false;
+  };
+
+  const [showMissions, setShowMissions] = useState(false); // Estado para controlar la visibilidad del menú de misiones
+
+  // Información de las misiones
+  const missions = [
+    { name: 'Misión 1', description: 'Compra 5 gallinas', reward: "Comprar cerdos" },
+    { name: 'Misión 2', description: 'Compra 5 cerdos', reward: "Comprar vacas" },
+    { name: 'Misión 3', description: 'Compra 5 vacas', reward: "Comprar ovejas" },
+    { name: 'Misión 4', description: 'Compra 5 ovejas', reward: "Comprar cabras" },
+    // ... más misiones ...
+  ];
+
+  // Función para abrir o cerrar el menú de misiones
+  const handleMissionsClick = () => {
+    setShowMissions(!showMissions);
+  };
+
+  const [completedMissions, setCompletedMissions] = useState([false, false, false, false]); // Estado para misiones completadas
+
+  // Función para manejar la finalización de una misión
+  const handleCompleteMission = (index) => {
+    const newCompletedMissions = [...completedMissions];
+    newCompletedMissions[index] = true;
+    setCompletedMissions(newCompletedMissions);
+
+    // Desbloquear el siguiente animal basado en la misión completada
+    if (index === 0) {
+      setUnlockedAnimals([false, true, false, false, false, true, true]); // Desbloquea el cerdo
+    } else if (index === 1) {
+      setUnlockedAnimals([false, false, true, false, false, true, true]); // Desbloquea la vaca
+    } else if (index === 2) {
+      setUnlockedAnimals([false, false, false, true, false, true, true]); // Desbloquea la oveja
+    } else if (index === 3) {
+      setUnlockedAnimals([false, false, false, false, true, true, true]); // Desbloquea la cabra
+    }
+  };
+
+  // Función para verificar si una misión puede ser completada
+  const canCompleteMission = (index) => {
+    if (index === 0) return chickens >= 5;
+    if (index === 1) return pigs >= 5;
+    if (index === 2) return cows >= 5;
+    if (index === 3) return sheep >= 5;
+    return false;
   };
 
   return (
@@ -274,40 +333,83 @@ export default function App() {
           <Text style={styles.storeButtonText}>Tienda</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.storeButton} onPress={handleMissionsClick}>
+          <Text style={styles.storeButtonText}>Misiones</Text>
+        </TouchableOpacity>
+
         {/* Componente de la tienda */}
         {showStore && (
           <View style={styles.storeContainer}>
             <Text style={styles.storeTitle}>Bienvenido a la Tienda</Text>
-            {storeItems.map((item, index) => (
-              <View key={index} style={styles.storeItemContainer}>
-                {item.source && (
-                  <Image 
-                    style={styles.storeItemGif} 
-                    source={item.source}
-                    contentFit="contain"
-                  />
-                )}
-                <View style={styles.storeItemInfo}>
-                  <Text style={[styles.storeItemName, { color: isItemAvailable(item) ? '#000' : '#aaa' }]}>
-                    {item.name}
-                  </Text>
-                  <Text style={[styles.storeItemPrice, { color: isItemAvailable(item) ? '#007bff' : '#aaa' }]}>
-                    {item.price} monedas
-                  </Text>
+            {storeItems.map((item, index) => {
+              const available = isItemAvailable(item);
+              return (
+                <View key={index} style={styles.storeItemContainer}>
+                  {item.source && (
+                    <Image 
+                      style={styles.storeItemGif} 
+                      source={item.source}
+                      contentFit="contain"
+                    />
+                  )}
+                  <View style={styles.storeItemInfo}>
+                    <Text style={[styles.storeItemName, { color: available ? '#000' : '#aaa' }]}>
+                      {item.name}
+                    </Text>
+                    <Text style={[styles.storeItemPrice, { color: available ? '#007bff' : '#aaa' }]}>
+                      {item.price} monedas
+                    </Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={[styles.purchaseButton, { backgroundColor: available ? '#007bff' : '#aaa' }]} 
+                    onPress={() => handlePurchase(item)} 
+                    disabled={!available}
+                  >
+                    <Text style={styles.purchaseButtonText}>
+                      {available ? 'Comprar' : 'No disponible'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity 
-                  style={[styles.purchaseButton, { backgroundColor: isItemAvailable(item) ? '#007bff' : '#aaa' }]} 
-                  onPress={() => handlePurchase(item)} 
-                  disabled={!isItemAvailable(item)}
-                >
-                  <Text style={styles.purchaseButtonText}>
-                    {isItemAvailable(item) ? 'Comprar' : 'No disponible'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+              );
+            })}
 
             <TouchableOpacity style={styles.closeButton} onPress={handleStoreClick}>
+              <Text style={styles.closeButtonText}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Componente del menú de misiones */}
+        {showMissions && (
+          <View style={styles.storeContainer}>
+            <Text style={styles.storeTitle}>Misiones Disponibles</Text>
+            {missions.map((mission, index) => {
+              const isComplete = completedMissions[index];
+              const isReadyToComplete = canCompleteMission(index);
+              return (
+                <View key={index} style={styles.storeItemContainer}>
+                  <View style={styles.storeItemInfo}>
+                    <Text style={styles.storeItemName}>{mission.name}</Text>
+                    <Text style={styles.storeItemPrice}>{mission.description}</Text>
+                    <Text style={styles.storeItemPrice}>Recompensa: {mission.reward}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={[
+                      styles.purchaseButton, 
+                      { backgroundColor: isComplete ? '#aaa' : isReadyToComplete ? '#007bff' : '#ccc' }
+                    ]}
+                    onPress={() => handleCompleteMission(index)}
+                    disabled={isComplete || !isReadyToComplete}
+                  >
+                    <Text style={styles.purchaseButtonText}>
+                      {isComplete ? 'Completada' : isReadyToComplete ? 'Completar' : 'En proceso'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+
+            <TouchableOpacity style={styles.closeButton} onPress={handleMissionsClick}>
               <Text style={styles.closeButtonText}>Cerrar</Text>
             </TouchableOpacity>
           </View>
