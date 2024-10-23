@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, ImageBackground, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ImageBackground, Dimensions, AppState } from 'react-native';
 import { Image } from 'expo-image';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function App() {
   const [count, setCount] = useState(0);
@@ -264,6 +265,64 @@ export default function App() {
     if (index === 3) return sheep >= 5;
     return false;
   };
+
+  useEffect(() => {
+    // Cargar el progreso del juego al iniciar
+    const loadGameProgress = async () => {
+      try {
+        const savedCount = await AsyncStorage.getItem('count');
+        const savedChickens = await AsyncStorage.getItem('chickens');
+        const savedPigs = await AsyncStorage.getItem('pigs');
+        const savedCows = await AsyncStorage.getItem('cows');
+        const savedSheep = await AsyncStorage.getItem('sheep');
+        const savedGoats = await AsyncStorage.getItem('goats');
+        const savedCompletedMissions = await AsyncStorage.getItem('completedMissions');
+        const savedUnlockedAnimals = await AsyncStorage.getItem('unlockedAnimals');
+
+        if (savedCount !== null) setCount(JSON.parse(savedCount));
+        if (savedChickens !== null) setChickens(JSON.parse(savedChickens));
+        if (savedPigs !== null) setPigs(JSON.parse(savedPigs));
+        if (savedCows !== null) setCows(JSON.parse(savedCows));
+        if (savedSheep !== null) setSheep(JSON.parse(savedSheep));
+        if (savedGoats !== null) setGoats(JSON.parse(savedGoats));
+        if (savedCompletedMissions !== null) setCompletedMissions(JSON.parse(savedCompletedMissions));
+        if (savedUnlockedAnimals !== null) setUnlockedAnimals(JSON.parse(savedUnlockedAnimals));
+      } catch (error) {
+        console.error('Error loading game progress:', error);
+      }
+    };
+
+    loadGameProgress();
+  }, []);
+
+  useEffect(() => {
+    // Guardar el progreso del juego al cerrar la aplicación
+    const saveGameProgress = async () => {
+      try {
+        await AsyncStorage.setItem('count', JSON.stringify(count));
+        await AsyncStorage.setItem('chickens', JSON.stringify(chickens));
+        await AsyncStorage.setItem('pigs', JSON.stringify(pigs));
+        await AsyncStorage.setItem('cows', JSON.stringify(cows));
+        await AsyncStorage.setItem('sheep', JSON.stringify(sheep));
+        await AsyncStorage.setItem('goats', JSON.stringify(goats));
+        await AsyncStorage.setItem('completedMissions', JSON.stringify(completedMissions));
+        await AsyncStorage.setItem('unlockedAnimals', JSON.stringify(unlockedAnimals));
+      } catch (error) {
+        console.error('Error saving game progress:', error);
+      }
+    };
+
+    // Escuchar el evento de cierre de la aplicación
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'background') {
+        saveGameProgress();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [count, chickens, pigs, cows, sheep, goats, completedMissions, unlockedAnimals]);
 
   return (
     <ImageBackground
